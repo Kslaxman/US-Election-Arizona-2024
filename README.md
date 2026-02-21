@@ -115,7 +115,7 @@ The following district-specific factors were considered for their potential impa
 | Source | Data Collected |
 |--------|----------------|
 | [Arizona Secretary of State](https://azsos.gov/) | Official election results, voter registration data, turnout statistics (web scraped) |
-| [Ballotpedia — Arizona](https://ballotpedia.org/) | Candidate information, district profiles, historical race results (web scraped) |
+| [Ballotpedia — Arizona]([https://ballotpedia.org/](https://ballotpedia.org/Arizona%27s_7th_Congressional_District_special_election,_2025)) | Candidate information, district profiles, historical race results (web scraped) |
 | [U.S. Census Bureau / TIGER Shapefiles](https://www.census.gov/geographies/mapping-files.html) | Demographic shapefiles, congressional district boundaries |
 | [American Community Survey (ACS)](https://www.census.gov/programs-surveys/acs) | Socioeconomic and demographic indicators |
 | Government & Demographic Shapefiles | Geospatial boundary data for counties and districts |

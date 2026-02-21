@@ -1,0 +1,434 @@
+---
+title: "Elections 2024"
+output: html_document
+date: "2024-10-29"
+---
+
+
+```{r}
+library(tidycensus)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyverse)
+library(tigris)
+
+
+census_api_key("21d151be2a0704c84cb52bd1a5da795055f2177d", install = TRUE, overwrite = TRUE)
+```
+```{r}
+state_pop <- get_decennial(geography = "state", variables = "P1_001N", year = 2020)
+head(state_pop)
+```
+```{r}
+arizona_decennial <- state_pop %>% filter(NAME == "Arizona")
+arizona_decennial
+```
+```{r}
+state_income <- get_acs(geography = "state", year = 2020, variables = "B19013_001") %>% filter(NAME == "Arizona")
+state_income
+```
+
+```{r}
+county_income <- get_acs(geography = "county", variables = "B19013_001")
+arizona_county_income <- county_income %>% filter(str_detect(NAME, "Arizona"))
+arizona_county_income
+```
+
+```{r}
+# Individual state income that share a border with Mexico
+states_income <- get_acs(geography = "state", variables = 'B19013_001', survey = 'acs1', state = c('CA', 'AZ', 'NM', 'TX'))
+
+ggplot(states_income, aes(x = estimate, y = reorder(NAME, estimate))) + 
+  geom_point(color = "navy", size = 4) +
+  scale_x_continuous(labels = scales::dollar) +
+  theme_minimal(base_size = 14) + 
+  labs(x = "2016 ACS estimate", 
+       y = "", 
+       title = "Median household income by state")
+```
+
+```{r}
+# Race in Arizona and Arizona 7
+race_vars <- c(White = "B03002_003", Black = "B03002_004", Native = "B03002_005", Asian = "B03002_006", HIPI = "B03002_007", Hispanic = "B03002_012")
+az_race <- get_acs(geography = "county", state = "AZ", variables = race_vars, summary_var = "B03002_001")
+# az_race
+
+az7_race <- az_race %>% filter(NAME %in% c('Maricopa County, Arizona', 'Yuma County, Arizona', 'Pima County, Arizona')) 
+az7_race
+```
+
+```{r}
+# Race Percentage
+az_race_pct <- az_race %>% mutate(pct = 100 * (estimate / summary_est)) %>% select(NAME, variable, pct)
+# az_race_pct
+
+az7_race_pct <- az7_race %>% mutate(pct = 100 * (estimate / summary_est)) %>% select(NAME, variable, pct)
+az7_race_pct
+```
+
+```{r}
+options(tigris_use_sf = TRUE)
+
+# Load Arizona congressional districts (118th Congress for 2024)
+az_districts <- congressional_districts(cb = TRUE, year = 2022) %>%
+  filter(STATEFP == "04")  # Arizona's FIPS code is 04
+
+# Filter for District 7
+az_district_7 <- az_districts %>% filter(CD118FP == "07")
+
+az_counties <- counties(state = "04", cb = TRUE) %>%
+  filter(NAME %in% c("Maricopa", "Pima", "Yuma"))
+
+race_data <- data.frame(
+  County = c("Maricopa", "Pima", "Yuma"),
+  Race = c("White", "White", "Hispanic"),
+  Percentage = c(53.25, 50.05, 65.26),
+  Longitude = c(-112.074, -110.9747, -114.615),
+  Latitude = c(33.4484, 32.2226, 32.6927)
+)
+
+ggplot() +
+  geom_sf(data = az_counties, fill = "#D3D3D3", color = "black") +
+  geom_sf(data = az_district_7, fill = "#87CEEB", color = "black", size = 0.8) +
+  geom_text(data = race_data, aes(x = Longitude, y = Latitude, 
+                                  label = paste(County, "\n", Race, "(", Percentage, "%)", sep = "")),
+            color = "#003366", size = 3.5) +
+  labs(title = "Arizona's 7th Congressional District with Dominant Race per County",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+```
+
+```{r}
+# Largest Race in Arizona
+az_largest <- az_race %>% group_by(GEOID) %>% filter(estimate == max(estimate)) %>% select(NAME, variable, estimate)
+az_largest
+
+# largest Race in Arizona 7th District
+az7_largest <- az7_race %>% group_by(GEOID) %>% filter(estimate == max(estimate)) %>% select(NAME, variable, estimate)
+# az7_largest
+```
+
+```{r}
+# Median Age in counties of Arizona 7th Congressional District
+get_acs(geography = "county", variables = c(median_age = "B19013_001"), state = "AZ") %>% filter(NAME %in% c("Pima County, Arizona", "Yuma County, Arizona", "Maricopa County, Arizona"))
+```
+
+```{r}
+# Margin of error plot
+margin_error <- get_acs(geography = "county", variables = c(medianage = "B19013_001"), state = "AZ") %>% filter(NAME %in% c("Maricopa County, Arizona", "Pima County, Arizona", "Yuma County, Arizona")) %>% mutate(NAME = str_replace(NAME, " County, Arizona", ""))
+
+ggplot(margin_error, aes(x = estimate, y = reorder(NAME, estimate))) + geom_errorbarh(aes(xmin = estimate - moe, xmax = estimate + moe)) + geom_point(size = 3, color = "darkgreen") + theme_grey(base_size = 14) + labs(title = "Median age, counties in Arizona 7th District", subtitle = "2012 - 2016 American Community Survey", x = "ACS estimate (bars represent margin of error)", y = "")
+
+```
+
+
+```{r}
+# Education in Arizona 7
+edu_vars <- c("HighSchool" = "B15003_017", "Bachelors" = "B15003_022")
+az_edu <- get_acs(geography = "county", state = "AZ", variables = edu_vars, summary_var = "B15003_001") %>%
+  filter(NAME %in% c('Maricopa County, Arizona', 'Yuma County, Arizona', 'Pima County, Arizona'))
+
+az_edu_pct <- az_edu %>%
+  mutate(pct = 100 * (estimate / summary_est)) %>%
+  select(NAME, variable, pct)
+
+ggplot(az_edu_pct, aes(x = reorder(NAME, pct), y = pct, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Education Levels in Arizona's District 7", x = "County", y = "Percentage") +
+  theme_minimal()
+
+```
+
+```{r}
+# Employment Status Plot in Arizona 7th Congressional District
+employment_vars <- c("Employed" = "B23025_004", "Unemployed" = "B23025_005")
+az_employment <- get_acs(geography = "county", state = "AZ", variables = employment_vars, summary_var = "B23025_001") %>%
+  filter(NAME %in% c("Maricopa County, Arizona", "Pima County, Arizona", "Yuma County, Arizona"))
+
+az_employment_pct <- az_employment %>%
+  mutate(pct = 100 * (estimate / summary_est)) %>%
+  select(NAME, variable, pct)
+
+ggplot(az_employment_pct, aes(x = reorder(NAME, pct), y = pct, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Employment Status in Arizona's District 7", x = "County", y = "Percentage") +
+  theme_minimal()
+
+```
+
+```{r}
+# Age Distribution Plot in Arizona 7th Congressional District
+age_vars <- c("Under 18" = "B01001_003", "18-64" = "B01001_020", "65 and older" = "B01001_029")
+az_age <- get_acs(geography = "county", state = "AZ", variables = age_vars, summary_var = "B01001_001") %>%
+  filter(NAME %in% c("Maricopa County, Arizona", "Pima County, Arizona", "Yuma County, Arizona"))
+
+az_age_pct <- az_age %>%
+  mutate(pct = 100 * (estimate / summary_est)) %>%
+  select(NAME, variable, pct)
+
+ggplot(az_age_pct, aes(x = reorder(NAME, pct), y = pct, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Age Distribution in Arizona's District 7", x = "County", y = "Percentage") +
+  theme_minimal()
+
+```
+
+```{r}
+# County-wise Socio and Medical factor values
+variables <- c(
+  homeownership = "B25003_002",      
+  health_insurance = "B27010_001",    
+  poverty = "B17001_002",             
+  income = "B19013_001",              
+  median_age = "B01002_001"           
+)
+
+az_data <- get_acs(geography = "county", state = "AZ", variables = variables, year = 2020) %>%
+  filter(NAME %in% c("Maricopa County, Arizona", "Pima County, Arizona", "Yuma County, Arizona")) %>%
+  select(NAME, variable, estimate)
+
+total_population <- get_acs(geography = "county", state = "AZ", variables = "B01003_001", year = 2020) %>%
+  filter(NAME %in% c("Maricopa County, Arizona", "Pima County, Arizona", "Yuma County, Arizona")) %>%
+  rename(total_pop = estimate) %>%
+  select(NAME, total_pop)
+
+az_data_pct <- az_data %>%
+  left_join(total_population, by = "NAME") %>%
+  mutate(
+    pct = case_when(
+      variable == "homeownership" ~ 100 * (estimate / total_pop),
+      variable == "health_insurance" ~ 100 * (estimate / total_pop),
+      variable == "poverty" ~ 100 * (estimate / total_pop),
+      TRUE ~ estimate
+    )
+  ) %>%
+  select(NAME, variable, estimate)
+
+az_data_long <- az_data_pct %>%
+  mutate(variable = recode(variable, 
+                           homeownership = "homeownership", 
+                           health_insurance = "health insurance", 
+                           poverty = "poverty", 
+                           income = "income", 
+                           median_age = "median age")) %>%
+  arrange(NAME, variable)
+
+print(az_data_long)
+
+```
+
+
+```{r}
+# Map of Leading Party in each district in Arizona
+az_congress <- congressional_districts(state = "AZ", cb = TRUE)
+
+az_congress_members <- data.frame(
+  District = c("1", "2", "3", "4", "5", "6", "7", "8", "9"),
+  Member_Name = c("Tom O'Halleran", "Ann Kirkpatrick", "Raul Grijalva", 
+                  "Paul Gosar", "Andy Biggs", "David Schweikert", 
+                  "Ruben Gallego", "Debbie Lesko", "Greg Stanton"),
+  Party = c("Democrat", "Democrat", "Democrat", 
+            "Republican", "Republican", "Republican", 
+            "Democrat", "Republican", "Democrat")
+)
+
+az_congress <- az_congress %>%
+  mutate(District = gsub("Congressional District ", "", NAMELSAD))
+
+az_congress_joined <- left_join(az_congress, az_congress_members, by = "District")
+# Districts in Arizona 7th Congressional District
+ggplot(az_congress_joined) +
+  geom_sf() +
+  coord_sf(crs = 3083, datum = NA) + 
+  theme_minimal() +
+  labs(title = "Congress House Districts in Arizona")
+```
+
+
+
+```{r}
+# Map of Leading Party in each district in Arizona
+az_congress <- congressional_districts(state = "AZ", cb = TRUE)
+
+az_congress_members <- data.frame(
+  District = c("1", "2", "3", "4", "5", "6", "7", "8", "9"),
+  Member_Name = c("Tom O'Halleran", "Ann Kirkpatrick", "Raul Grijalva", 
+                  "Paul Gosar", "Andy Biggs", "David Schweikert", 
+                  "Ruben Gallego", "Debbie Lesko", "Greg Stanton"),
+  Party = c("Democrat", "Democrat", "Democrat", 
+            "Republican", "Republican", "Republican", 
+            "Democrat", "Republican", "Democrat")
+)
+
+az_congress <- az_congress %>%
+  mutate(District = gsub("Congressional District ", "", NAMELSAD))
+
+az_congress_joined <- left_join(az_congress, az_congress_members, by = "District")
+
+# Congressional districts by party
+ggplot(az_congress_joined, aes(fill = Party)) +
+  geom_sf() +
+  coord_sf(crs = 3083, datum = NA) + 
+  scale_fill_manual(values = c("Democrat" = "blue", "Republican" = "red")) +
+  theme_minimal() +
+  labs(title = "Congressional Districts in Arizona by Party")
+
+```
+
+```{r}
+prec_data <- st_read("data/az_2022_gen_prec.shp")
+precincts <- st_as_sf(prec_data, wkt = "geometry") 
+
+ggplot(data = precincts) +
+  geom_sf(fill = NA, color = "black", lwd = 0.05) + 
+  labs(title = "Precinct Boundaries") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+```{r}
+unique_districts <- unique(precincts$CONG_DIST)
+print(unique_districts)
+```
+```{r}
+precincts$highlight <- ifelse((precincts$CONG_DIST %in% c("7", "07")), "Yes", "No")
+
+sum(precincts$highlight == "Yes")
+
+table(precincts$highlight)
+
+ggplot(data = precincts) +
+  geom_sf(fill = "lightgrey", color = "black", lwd = 0.5) +  
+  geom_sf(data = subset(precincts, highlight == "Yes"), fill = "yellow", color = "black", lwd = 0.5) +
+  labs(title = "Precinct Boundaries Highlighting Congressional District 7") +
+  theme_minimal() +
+  theme(legend.position = "none")
+cong_dist_7_bounds <- st_bbox(subset(precincts, CONG_DIST %in% c("7", "07")))
+```
+
+```{r}
+ggplot(data = precincts) +
+  geom_sf(fill = "lightgrey", color = "black", lwd = 0.5) + 
+  geom_sf(data = subset(precincts, highlight == "Yes"), fill = "yellow", color = "black", lwd = 0.5) + 
+  labs(title = "Precinct Boundaries Highlighting Congressional District 7") +
+  xlim(cong_dist_7_bounds["xmin"], cong_dist_7_bounds["xmax"]) +
+  ylim(cong_dist_7_bounds["ymin"], cong_dist_7_bounds["ymax"]) + 
+  theme_minimal() +
+  theme(legend.position = "none")
+
+cong_dist_7_bounds <- st_bbox(subset(precincts, CONG_DIST %in% c("7", "07")))
+```
+
+```{r}
+ggplot(data = subset(precincts, highlight == "Yes")) +
+  geom_sf(fill = "yellow", color = "black", lwd = 0.5) + 
+  labs(title = "Precincts for Congressional District 7") +
+  xlim(cong_dist_7_bounds["xmin"], cong_dist_7_bounds["xmax"]) +  
+  ylim(cong_dist_7_bounds["ymin"], cong_dist_7_bounds["ymax"]) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+district_7_data <- precincts %>%
+  filter(CONG_DIST %in% c("7", "07"))%>%
+  select(UNIQUE_ID, COUNTYFP, COUNTY_NAM, PRECINCTNA, PCTNUM, CONG_DIST, GCON07DGRI, GCON07OWRI, GCON07RPOZ)
+
+print(district_7_data)
+```
+
+```{r}
+# Step 1: Determine the winner in each precinct
+il_prec_win_sen <- district_7_data %>%
+  mutate(Winner = case_when(
+    GCON07DGRI > GCON07RPOZ ~ "Democrat",
+    GCON07DGRI < GCON07RPOZ ~ "Republican",
+    TRUE ~ "Tie"
+  ))
+
+# Step 2: Plotting the results
+g_congressional <- ggplot(il_prec_win_sen, aes(fill = Winner)) + 
+  geom_sf() + 
+  scale_fill_manual(values = c("Democrat" = "blue", "Republican" = "red", "Tie" = "green")) +
+  labs(title = "2022 AZ- 07 Congressional Election Results by Precinct") +
+  theme_void()
+
+# Display the plot
+print(g_congressional)
+```
+
+```{r}
+votes_data <- data.frame(
+  Candidate = c("Democratic", "Republican", "Write-In"),
+  Votes = c(sum(district_7_data$GCON07DGRI, na.rm = TRUE),  # Total Democratic Votes
+             sum(district_7_data$GCON07RPOZ, na.rm = TRUE),  # Total Republican Votes
+             sum(district_7_data$GCON07OWRI, na.rm = TRUE))  # Total Write-In Votes
+)
+
+# Create a bar chart
+ggplot(data = votes_data, aes(x = Candidate, y = Votes, fill = Candidate)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Voting Results for AZ 07",
+       x = "Candidates",
+       y = "Number of Votes") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Democratic" = "blue", "Republican" = "red", "Write-In" = "grey")) +
+  theme(legend.position = "none")
+```
+
+```{r}
+library(sf)
+
+poverty_data <- st_read('data/az_pov_2022_t.shp')
+```
+```{r}
+library(dplyr)
+# Check for null values in each column
+na_summary <- poverty_data %>%
+  summarise(across(everything(), ~ sum(is.na(.)), .names = "na_count_{col}"))
+
+print(na_summary)
+```
+```{r}
+# Check for invalid geometries in district_7_data
+invalid_geometries <- st_is_valid(poverty_data, quiet = FALSE)
+
+# Get the indices of invalid geometries
+invalid_indices <- which(!invalid_geometries)
+
+# Print the invalid geometries (if any)
+if (length(invalid_indices) > 0) {
+  print(poverty_data[invalid_indices, ])
+} else {
+  print("All geometries in Poverty_data are valid.")
+}
+```
+```{r}
+# Transform poverty_data to match district_7_data
+poverty_data <- st_transform(poverty_data, st_crs(district_7_data))
+# Merge the two datasets using st_join
+merged_data <- st_join(district_7_data, poverty_data, join = st_intersects)
+
+# Print the merged data to check the result
+print(merged_data)
+```
+
+```{r}
+library(tmap)
+
+# Setting up tmap mode for plotting
+tmap_mode("plot")
+
+# Map for Total Population Below Poverty
+poverty_map_total <- tm_shape(merged_data) +
+  tm_polygons("TOT_BPOV22", 
+               style = "quantile", 
+               palette = "Reds", 
+               title = "Total Population Below Poverty") +
+  tm_layout(title = "Choropleth Map of Total Population Below Poverty by precinct")
+# Print map
+print(poverty_map_total)
+```
+

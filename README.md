@@ -145,17 +145,63 @@ The following district-specific factors were considered for their potential impa
 
 ## Methodology
 
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Data Collection │────▶│  Data Processing │────▶│  Feature        │
-│  (Scraping +     │     │  (Cleaning,      │     │  Engineering    │
-│   Shapefiles)    │     │   Merging)       │     │                 │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-                                                          ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Reporting &     │◀────│  Geospatial      │◀────│  Predictive     │
-│  Visualization   │     │  Mapping         │     │  Modeling       │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+## 📐 Methodology
+
+<table>
+<tr>
+<td align="center" width="150">
+<h3>📥</h3>
+<b>Step 1</b><br>
+Data Collection<br>
+<sub>Web Scraping<br>(Ballotpedia & AZ SOS)<br>+ Government Shapefiles<br>+ ACS Demographics</sub>
+</td>
+<td align="center" width="30">
+<h3>➡️</h3>
+</td>
+<td align="center" width="150">
+<h3>⚙️</h3>
+<b>Step 2</b><br>
+Data Processing<br>
+<sub>Cleaning<br>Standardization<br>Multi-Source Merging<br>Geometry Validation</sub>
+</td>
+<td align="center" width="30">
+<h3>➡️</h3>
+</td>
+<td align="center" width="150">
+<h3>🧪</h3>
+<b>Step 3</b><br>
+Feature Engineering<br>
+<sub>Demographic Ratios<br>Vote Margins<br>Turnout Trends<br>Registration Shifts</sub>
+</td>
+<td align="center" width="30">
+<h3>➡️</h3>
+</td>
+<td align="center" width="150">
+<h3>📊</h3>
+<b>Step 4</b><br>
+Predictive Modeling<br>
+<sub>Random Forest<br>Gradient Boosting<br>Decision Tree<br>SVM & Linear Reg</sub>
+</td>
+<td align="center" width="30">
+<h3>➡️</h3>
+</td>
+<td align="center" width="150">
+<h3>🗺️</h3>
+<b>Step 5</b><br>
+Geospatial Mapping<br>
+<sub>Precinct Choropleths<br>County Overlays<br>District Boundaries<br>Poverty Heatmaps</sub>
+</td>
+<td align="center" width="30">
+<h3>➡️</h3>
+</td>
+<td align="center" width="150">
+<h3>📈</h3>
+<b>Step 6</b><br>
+Reporting<br>
+<sub>Charts & Plots<br>Model Comparison<br>Final Insights<br>& Conclusions</sub>
+</td>
+</tr>
+</table>
 
 ## Results and Insights
 

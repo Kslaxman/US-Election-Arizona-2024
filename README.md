@@ -145,17 +145,17 @@ The following district-specific factors were considered for their potential impa
 
 ## Methodology
 
-┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
-│ Data Collection │────▶│ Data Processing │────▶│ Feature │
-│ (Scraping + │ │ (Cleaning, │ │ Engineering │
-│ Shapefiles) │ │ Merging) │ │ │
-└─────────────────┘ └──────────────────┘ └────────┬────────┘
-│
-▼
-┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
-│ Reporting & │◀────│ Geospatial │◀────│ Predictive │
-│ Visualization │ │ Mapping │ │ Modeling │
-└─────────────────┘ └──────────────────┘ └─────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Data Collection │────▶│  Data Processing │────▶│  Feature        │
+│  (Scraping +     │     │  (Cleaning,      │     │  Engineering    │
+│   Shapefiles)    │     │   Merging)       │     │                 │
+└─────────────────┘     └──────────────────┘     └────────┬────────┘
+                                                          │
+                                                          ▼
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Reporting &     │◀────│  Geospatial      │◀────│  Predictive     │
+│  Visualization   │     │  Mapping         │     │  Modeling       │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
 
 ## Results and Insights
 
